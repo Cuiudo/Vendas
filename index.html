@@ -39,28 +39,28 @@ fontFamily: { sans: ['Inter', 'sans-serif'] }
 </div>
 </div>
 
-<div class="flex items-center space-x-2">
+<div class="flex items-center space-x-1 sm:space-x-2">
 <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium transition-colors bg-orange-50 text-orange-700 flex items-center space-x-1.5">
 <i class="fa-solid fa-chart-pie"></i>
-<span class="hidden sm:inline">Painel do Dia</span>
+<span class="hidden md:inline">Painel</span>
 </button>
 <button onclick="switchTab('sales')" id="nav-sales" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium transition-colors text-slate-600 hover:bg-slate-100 flex items-center space-x-1.5">
 <i class="fa-solid fa-plus-circle"></i>
-<span class="hidden sm:inline">Registrar Venda</span>
+<span class="hidden md:inline">Registrar</span>
 </button>
 <button onclick="switchTab('analytics')" id="nav-analytics" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium transition-colors text-slate-600 hover:bg-slate-100 flex items-center space-x-1.5">
 <i class="fa-solid fa-chart-column"></i>
-<span class="hidden sm:inline">Gráficos Livres</span>
+<span class="hidden md:inline">Gráficos</span>
 </button>
 <button onclick="switchTab('reports')" id="nav-reports" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium transition-colors text-slate-600 hover:bg-slate-100 flex items-center space-x-1.5">
 <i class="fa-solid fa-file-arrow-down"></i>
-<span class="hidden sm:inline">Relatório</span>
+<span class="hidden md:inline">Relatório</span>
 </button>
 <button onclick="openConfigModal()" class="p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors ml-1" title="Gerenciar Categorias e Produtos">
 <i class="fa-solid fa-gear text-lg"></i>
 </button>
-<button onclick="confirmNewDay()" class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow-sm transition-all ml-2" title="Zerar e iniciar novo dia">
-<i class="fa-solid fa-rotate-right mr-1"></i> Novo Dia
+<button onclick="confirmNewDay()" class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow-sm transition-all ml-1 sm:ml-2" title="Zerar e iniciar novo dia">
+<i class="fa-solid fa-rotate-right mr-1"></i> <span class="hidden sm:inline">Novo Dia</span>
 </button>
 </div>
 </div>
@@ -236,7 +236,7 @@ fontFamily: { sans: ['Inter', 'sans-serif'] }
 <div class="flex items-center justify-between pb-4 border-b border-slate-100">
 <div>
 <h2 class="font-bold text-lg text-slate-900">Relatório Diário</h2>
-<p class="text-xs text-slate-500">Pronto para exportar e compartilhar no WhatsApp</p>
+<p class="text-xs text-slate-500">Pronto para exportar e compartilhar</p>
 </div>
 <button onclick="exportReportAsImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all flex items-center space-x-1.5">
 <i class="fa-solid fa-image"></i>
