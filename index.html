@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registro Diário de Vendas</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- html2canvas for image export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- FontAwesome icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Google Fonts Inter -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+theme: {
+extend: {
+fontFamily: { sans: ['Inter', 'sans-serif'] }
+}
+}
+}
+</script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+<!-- Header -->
+<header class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-30">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<div class="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center text-white shadow-md shadow-orange-500/20">
+<i class="fa-solid fa-cash-register text-lg"></i>
+</div>
+<div>
+<h1 class="font-bold text-base text-slate-900 leading-tight">Vendas Diárias</h1>
+<p id="header-date-display" class="text-xs text-slate-500 font-medium"></p>
+</div>
+</div>
+
+<div class="flex items-center space-x-2">
+<button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium transition-colors bg-orange-50 text-orange-700 flex items-center space-x-1.5">
+<i class="fa-solid fa-chart-pie"></i>
+<span class="hidden sm:inline">Painel do Dia</span>
+</button>
+<button onclick="switchTab('sales')" id="nav-sales" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium transition-colors text-slate-600 hover:bg-slate-100 flex items-center space-x-1.5">
+<i class="fa-solid fa-plus-circle"></i>
+<span class="hidden sm:inline">Registrar Venda</span>
+</button>
+<button onclick="switchTab('analytics')" id="nav-analytics" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium transition-colors text-slate-600 hover:bg-slate-100 flex items-center space-x-1.5">
+<i class="fa-solid fa-chart-column"></i>
+<span class="hidden sm:inline">Gráficos Livres</span>
+</button>
+<button onclick="switchTab('reports')" id="nav-reports" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium transition-colors text-slate-600 hover:bg-slate-100 flex items-center space-x-1.5">
+<i class="fa-solid fa-file-arrow-down"></i>
+<span class="hidden sm:inline">Relatório</span>
+</button>
+<button onclick="openConfigModal()" class="p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors ml-1" title="Gerenciar Categorias e Produtos">
+<i class="fa-solid fa-gear text-lg"></i>
+</button>
+<button onclick="confirmNewDay()" class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow-sm transition-all ml-2" title="Zerar e iniciar novo dia">
+<i class="fa-solid fa-rotate-right mr-1"></i> Novo Dia
+</button>
+</div>
+</div>
+</header>
+
+<!-- Main Container -->
+<main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+<!-- TAB 1: DASHBOARD DIÁRIO -->
+<section id="tab-dashboard" class="space-y-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+<div>
+<p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Faturamento Hoje</p>
+<h3 id="stat-total-rev" class="text-2xl font-bold text-slate-900 mt-1">R 0,00</h3>
+<p class="text-xs text-purple-600 font-medium mt-1"><i class="fa-solid fa-receipt"></i> Média por venda</p>
+</div>
+<div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl">
+<i class="fa-solid fa-tag"></i>
+</div>
+</div>
+<div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+<div>
+<p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Forma Principal</p>
+<h3 id="stat-top-payment" class="text-xl font-bold text-slate-900 mt-1">-</h3>
+<p class="text-xs text-orange-600 font-medium mt-1"><i class="fa-solid fa-credit-card"></i> Mais utilizada</p>
+</div>
+<div class="w-12 h-12 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center text-xl">
+<i class="fa-solid fa-wallet"></i>
+</div>
+</div>
+</div>
+
+<!-- Quick Charts Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Hourly Bar Chart -->
+<div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-bold text-slate-900 text-base">Vendas por Horário (Movimento do Dia)</h3>
+<span class="text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md">Hoje</span>
+</div>
+<div class="flex-1 relative min-h-[280px]">
+<canvas id="dashboardHourlyChart"></canvas>
+</div>
+</div>
+
+<!-- Payment Methods Donut -->
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-bold text-slate-900 text-base">Formas de Pagamento</h3>
+</div>
+<div class="flex-1 relative flex items-center justify-center min-h-[260px]">
+<canvas id="dashboardPaymentChart"></canvas>
+</div>
+</div>
+</div>
+</section>
+
+<!-- TAB 2: REGISTRAR E GERENCIAR VENDAS DO DIA -->
+<section id="tab-sales" class="hidden space-y-6">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Form -->
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 lg:col-span-1">
+<h2 class="font-bold text-lg text-slate-900 mb-4 flex items-center space-x-2">
+<i class="fa-solid fa-cart-plus text-orange-600"></i>
+<span>Nova Venda</span>
+</h2>
+<form id="sale-form" onsubmit="handleSaleSubmit(event)" class="space-y-4">
+<div>
+<label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Categoria</label>
+<select id="sale-category" onchange="updateProductDropdown()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500">
+<!-- Populated dynamically -->
+</select>
+</div>
+<div>
+<label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Produto</label>
+<select id="sale-product" onchange="updateProductPrice()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500">
+<!-- Populated dynamically -->
+</select>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div>
+<label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Quantidade</label>
+<input type="number" id="sale-qty" min="1" value="1" oninput="calculateTotal()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500">
+</div>
+<div>
+<label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Preço Unit. (R 0,00</span>
+</div>
+<button type="submit" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 rounded-xl shadow-md shadow-orange-600/20 transition-all flex items-center justify-center space-x-2">
+<i class="fa-solid fa-check"></i>
+<span>Confirmar Venda</span>
+</button>
+</form>
+</div>
+
+<!-- Sales History Table -->
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 lg:col-span-2 flex flex-col">
+<div class="flex items-center justify-between mb-4">
+<h2 class="font-bold text-lg text-slate-900 flex items-center space-x-2">
+<i class="fa-solid fa-list text-slate-600"></i>
+<span>Vendas Realizadas Hoje</span>
+</h2>
+<span id="sale-count-badge" class="text-xs bg-slate-100 font-semibold px-2.5 py-1 rounded-md text-slate-700">0 itens</span>
+</div>
+<div class="overflow-x-auto flex-1 max-h-[450px]">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider sticky top-0 bg-white">
+<th class="py-3 px-3">Horário</th>
+<th class="py-3 px-3">Produto / Categoria</th>
+<th class="py-3 px-3">Qtd</th>
+<th class="py-3 px-3">Total</th>
+<th class="py-3 px-3">Pgto</th>
+<th class="py-3 px-3 text-right">Ação</th>
+</tr>
+</thead>
+<tbody id="sales-table-body" class="divide-y divide-slate-100 text-sm">
+<!-- Populated dynamically -->
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</section>
+
+<!-- TAB 3: CUSTOMIZABLE ANALYTICS / GRÁFICOS LIVRES -->
+<section id="tab-analytics" class="hidden space-y-6">
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+<div>
+<h2 class="font-bold text-lg text-slate-900">Gráficos Personalizados</h2>
+<p class="text-xs text-slate-500 mt-0.5">Escolha livremente os eixos e o tipo de gráfico para analisar suas vendas do dia</p>
+</div>
+<div class="flex flex-wrap items-center gap-3">
+<div>
+<label class="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Tipo de Gráfico</label>
+<select id="custom-chart-type" onchange="renderCustomChart()" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20">
+<option value="bar">Gráfico de Barras</option>
+<option value="line">Gráfico de Linha</option>
+<option value="pie">Gráfico de Pizza</option>
+<option value="doughnut">Rosca</option>
+</select>
+</div>
+<div>
+<label class="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Eixo X (Abscissas)</label>
+<select id="custom-axis-x" onchange="renderCustomChart()" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20">
+<option value="product">Produto</option>
+<option value="category">Categoria</option>
+<option value="payment">Forma de Pagamento</option>
+<option value="hour">Horário da Venda</option>
+</select>
+</div>
+<div>
+<label class="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Eixo Y (Ordenadas)</label>
+<select id="custom-axis-y" onchange="renderCustomChart()" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20">
+<option value="revenue">Faturamento Total (R$`)</option>
+<option value="quantity">Quantidade Vendida (Unid.)</option>
+<option value="count">Número de Vendas</option>
+</select>
+</div>
+</div>
+</div>
+
+<div class="relative h-[380px] w-full flex items-center justify-center">
+<canvas id="customAnalyticsChart"></canvas>
+</div>
+</div>
+</section>
+
+<!-- TAB 4: RELATÓRIO EXPORTÁVEL -->
+<section id="tab-reports" class="hidden space-y-6">
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-3xl mx-auto space-y-6">
+<div class="flex items-center justify-between pb-4 border-b border-slate-100">
+<div>
+<h2 class="font-bold text-lg text-slate-900">Relatório Diário</h2>
+<p class="text-xs text-slate-500">Pronto para exportar e compartilhar no WhatsApp</p>
+</div>
+<button onclick="exportReportAsImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all flex items-center space-x-1.5">
+<i class="fa-solid fa-image"></i>
+<span>Exportar como Imagem</span>
+</button>
+</div>
+
+<!-- Printable Card Area -->
+<div id="printable-report" class="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-6">
+<div class="flex items-center justify-between border-b border-slate-200 pb-4">
+<div class="flex items-center space-x-3">
+<div class="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center text-white font-bold text-lg">
+<i class="fa-solid fa-fire"></i>
+</div>
+<div>
+<h3 class="font-bold text-slate-900 text-base">Fechamento de Caixa Diário</h3>
+<p id="report-date-str" class="text-xs text-slate-500">Data: --/--/----</p>
+</div>
+</div>
+<div class="text-right">
+<span class="text-xs text-slate-500">Emitido às:</span>
+<p id="report-time-str" class="text-xs font-semibold text-slate-800"></p>
+</div>
+</div>
+
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+<div class="bg-white p-4 rounded-xl border border-slate-200">
+<p class="text-xs text-slate-500 uppercase font-medium">Total do Dia</p>
+<h4 id="rep-total" class="text-lg font-bold text-slate-900 mt-1">R$ 0,00&lt;/h4&gt; &lt;/div&gt; &lt;div class="bg-white p-4 rounded-xl border border-slate-200"&gt; &lt;p class="text-xs text-slate-500 uppercase font-medium"&gt;Vendas&lt;/p&gt; &lt;h4 id="rep-count" class="text-lg font-bold text-slate-900 mt-1"&gt;0&lt;/h4&gt; &lt;/div&gt; &lt;div class="bg-white p-4 rounded-xl border border-slate-200"&gt; &lt;p class="text-xs text-slate-500 uppercase font-medium"&gt;Itens&lt;/p&gt; &lt;h4 id="rep-items" class="text-lg font-bold text-slate-900 mt-1"&gt;0&lt;/h4&gt; &lt;/div&gt; &lt;div class="bg-white p-4 rounded-xl border border-slate-200"&gt; &lt;p class="text-xs text-slate-500 uppercase font-medium"&gt;Ticket Médio&lt;/p&gt; &lt;h4 id="rep-ticket" class="text-lg font-bold text-slate-900 mt-1"&gt;R$ 0,00</h4>
+</div>
+</div>
+
+<div class="bg-white p-4 rounded-xl border border-slate-200">
+<h4 class="text-xs font-bold uppercase text-slate-600 mb-3">Formas de Pagamento</h4>
+<div id="rep-payments" class="grid grid-cols-3 gap-3 text-center text-xs">
+<!-- Populated -->
+</div>
+</div>
+
+<div class="bg-white p-4 rounded-xl border border-slate-200">
+<h4 class="text-xs font-bold uppercase text-slate-600 mb-3">Vendas por Categoria / Produto</h4>
+<div id="rep-categories" class="space-y-2 text-xs">
+<!-- Populated -->
+</div>
+</div>
+
+<div class="text-center pt-2 border-t border-slate-200">
+<p class="text-[11px] text-slate-400">Controle Diário de Vendas • Gerado com sucesso</p>
+</div>
+</div>
+</div>
+</section>
+
+</main>
+
+<!-- CONFIGURATION MODAL (Categories & Products Management) -->
+<div id="config-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4">
+<div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+<div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+<h3 class="font-bold text-lg text-slate-900 flex items-center space-x-2">
+<i class="fa-solid fa-boxes-packing text-orange-600"></i>
+<span>Gerenciar Categorias e Produtos</span>
+</h3>
+<button onclick="closeConfigModal()" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors">
+<i class="fa-solid fa-xmark text-lg"></i>
+</button>
+</div>
+
+<div class="p-6 overflow-y-auto space-y-6 flex-1">
+<!-- Add Category -->
+<div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+<h4 class="text-xs font-bold text-slate-700 uppercase mb-3">Adicionar Nova Categoria</h4>
+<form onsubmit="handleAddCategory(event)" class="flex gap-2">
+<input type="text" id="new-category-name" placeholder="Ex: Bebidas, Carvão, Lenha..." required class="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20">
+<button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-semibold transition-all">Adicionar</button>
+</form>
+</div>
+
+<!-- Add Product -->
+<div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+<h4 class="text-xs font-bold text-slate-700 uppercase mb-3">Adicionar Novo Produto</h4>
+<form onsubmit="handleAddProduct(event)" class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+<div class="sm:col-span-4">
+<select id="new-product-category" required class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20">
+<!-- Populated -->
+</select>
+</div>
+<div class="sm:col-span-4">
+<input type="text" id="new-product-name" placeholder="Nome do produto" required class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20">
+</div>
+<div class="sm:col-span-2">
+<input type="number" step="0.01" id="new-product-price" placeholder="Preço R`$" required class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20">
+</div>
+<div class="sm:col-span-2">
+<button type="submit" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-xl text-xs font-semibold transition-all">Salvar</button>
+</div>
+</form>
+</div>
+
+<!-- Product List -->
+<div>
+<h4 class="text-xs font-bold text-slate-700 uppercase mb-3">Produtos Cadastrados</h4>
+<div class="overflow-x-auto border border-slate-200 rounded-xl">
+<table class="w-full text-left border-collapse text-xs">
+<thead>
+<tr class="bg-slate-100 text-slate-600 uppercase font-semibold">
+<th class="p-3">Categoria</th>
+<th class="p-3">Produto</th>
+<th class="p-3">Preço Padrão</th>
+<th class="p-3 text-right">Ação</th>
+</tr>
+</thead>
+<tbody id="config-products-list" class="divide-y divide-slate-100">
+<!-- Populated -->
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+<div class="px-6 py-3 bg-slate-50 border-t border-slate-100 flex justify-end">
+<button onclick="closeConfigModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-4 py-2 rounded-xl text-xs font-semibold transition-all">Concluir</button>
+</div>
+</div>
+</div>
+
+<!-- CUSTOM MESSAGE MODAL -->
+<div id="msg-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4">
+<div class="bg-white w-full max-w-sm rounded-2xl shadow-xl border border-slate-200 p-6 text-center space-y-4">
+<div id="msg-icon" class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center text-xl">
+<i class="fa-solid fa-check"></i>
+</div>
+<h3 id="msg-title" class="font-bold text-base text-slate-900">Aviso</h3>
+<p id="msg-text" class="text-xs text-slate-600">Operação realizada.</p>
+<button onclick="closeMsgModal()" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-xl text-xs font-semibold transition-all">Entendido</button>
+</div>
+</div>
+
+<script>
+// State Management with localStorage (Zero initial defaults as requested)
+let categories = JSON.parse(localStorage.getItem('daily_sales_categories')) || [];
+let products = JSON.parse(localStorage.getItem('daily_sales_products')) || [];
+let sales = JSON.parse(localStorage.getItem('daily_sales_records')) || [];
+let lastActiveDate = localStorage.getItem('daily_sales_active_date') || new Date().toDateString();
+
+// Check if day changed automatically or reset needed
+const todayStr = new Date().toDateString();
+if (lastActiveDate !== todayStr) {
+// New day detected automatically
+sales = [];
+localStorage.setItem('daily_sales_records', JSON.stringify(sales));
+localStorage.setItem('daily_sales_active_date', todayStr);
+}
+
+let dashHourlyChart = null;
+let dashPaymentChart = null;
+let customChartInstance = null;
+
+window.onload = function() {
+document.getElementById('header-date-display').innerText = new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+// Set default time to now
+const nowTime = new Date().toTimeString().slice(0, 5);
+document.getElementById('sale-time').value = nowTime;
+
+initCategoryDropdowns();
+updateProductDropdown();
+renderSalesHistory();
+updateDashboardMetrics();
+initDashboardCharts();
+renderCustomChart();
+updateReportData();
+};
+
+function switchTab(tabId) {
+document.querySelectorAll('section[id^="tab-"]').forEach(sec => sec.classList.add('hidden'));
+document.getElementById(tab-${tabId}`).classList.remove('hidden');
+
+document.querySelectorAll('.nav-btn').forEach(btn => {
+btn.classList.remove('bg-orange-50', 'text-orange-700');
+btn.classList.add('text-slate-600', 'hover:bg-slate-100');
+});
+const activeNav = document.getElementById(nav-${tabId}`);
+if(activeNav) {
+activeNav.classList.remove('text-slate-600', 'hover:bg-slate-100');
+activeNav.classList.add('bg-orange-50', 'text-orange-700');
+}
+
+if(tabId === 'dashboard') {
+updateDashboardMetrics();
+updateDashboardCharts();
+} else if(tabId === 'analytics') {
+renderCustomChart();
+} else if(tabId === 'reports') {
+updateReportData();
+}
+}
+
+function showMessage(title, text, isSuccess = true) {
+document.getElementById('msg-title').innerText = title;
+document.getElementById('msg-text').innerText = text;
+const iconDiv = document.getElementById('msg-icon');
+if(isSuccess) {
+iconDiv.className = "w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center text-xl";
+iconDiv.innerHTML = '<i class="fa-solid fa-check"></i>';
+} else {
+iconDiv.className = "w-12 h-12 rounded-full bg-amber-100 text-amber-600 mx-auto flex items-center justify-center text-xl";
+iconDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+}
+document.getElementById('msg-modal').classList.remove('hidden');
+}
+
+function closeMsgModal() {
+document.getElementById('msg-modal').classList.add('hidden');
+}
+
+// Dropdowns & Forms
+function initCategoryDropdowns() {
+const catSelect = document.getElementById('sale-category');
+const newProdCat = document.getElementById('new-product-category');
+catSelect.innerHTML = '';
+newProdCat.innerHTML = '';
+
+if(categories.length === 0) {
+catSelect.innerHTML = <option value=""&gt;Cadastre uma categoria nas configurações&lt;/option>;
+newProdCat.innerHTML = <option value=""&gt;Nenhuma categoria&lt;/option>;
+return;
+}
+
+categories.forEach(cat => {
+catSelect.innerHTML += <option value="${cat}">${cat}&lt;/option>;
+newProdCat.innerHTML += <option value="${cat}">${cat}&lt;/option>;
+});
+}
+
+function updateProductDropdown() {
+const selectedCat = document.getElementById('sale-category').value;
+const prodSelect = document.getElementById('sale-product');
+prodSelect.innerHTML = '';
+
+const filtered = products.filter(p => p.category === selectedCat);
+if(filtered.length === 0) {
+prodSelect.innerHTML = <option value=""&gt;Sem produtos nesta categoria&lt;/option>;
+document.getElementById('sale-price').value = 0;
+calculateTotal();
+return;
+}
+
+filtered.forEach(p => {
+prodSelect.innerHTML += <option value="${p.id}" data-price="${p.price}"&gt;${p.name} (R$ ${p.price.toFixed(2)})</option>`;
+});
+updateProductPrice();
+}
+
+function updateProductPrice() {
+const prodSelect = document.getElementById('sale-product');
+const selectedOpt = prodSelect.options[prodSelect.selectedIndex];
+if(selectedOpt && selectedOpt.getAttribute('data-price')) {
+document.getElementById('sale-price').value = selectedOpt.getAttribute('data-price');
+} else {
+document.getElementById('sale-price').value = 0;
+}
+calculateTotal();
+}
+
+function calculateTotal() {
+const qty = parseFloat(document.getElementById('sale-qty').value) || 0;
+const price = parseFloat(document.getElementById('sale-price').value) || 0;
+document.getElementById('sale-total-preview').innerText = R$ ${(qty * price).toFixed(2)};
+}
+
+// Sale Submission
+function handleSaleSubmit(e) {
+e.preventDefault();
+const category = document.getElementById('sale-category').value;
+const prodSelect = document.getElementById('sale-product');
+const selectedOpt = prodSelect.options[prodSelect.selectedIndex];
+
+if(!category || !selectedOpt || !selectedOpt.getAttribute('data-price')) {
+showMessage('Atenção', 'Cadastre pelo menos uma categoria e um produto nas configurações (ícone de engrenagem) antes de registrar vendas.', false);
+return;
+}
+
+const productName = selectedOpt.text.split(' (R`$')[0];
+const quantity = parseInt(document.getElementById('sale-qty').value);
+const unitPrice = parseFloat(document.getElementById('sale-price').value);
+const total = quantity * unitPrice;
+const timeStr = document.getElementById('sale-time').value;
+const payment = document.getElementById('sale-payment').value;
+
+const newSale = {
+id: Date.now(),
+category,
+productName,
+quantity,
+unitPrice,
+total,
+time: timeStr,
+payment
+};
+
+sales.unshift(newSale);
+localStorage.setItem('daily_sales_records', JSON.stringify(sales));
+
+// Reset quantity & time to now
+document.getElementById('sale-qty').value = 1;
+document.getElementById('sale-time').value = new Date().toTimeString().slice(0, 5);
+updateProductPrice();
+
+showMessage('Sucesso', 'Venda registrada com sucesso!');
+renderSalesHistory();
+updateDashboardMetrics();
+updateDashboardCharts();
+renderCustomChart();
+}
+
+// Render Sales Table
+function renderSalesHistory() {
+const tbody = document.getElementById('sales-table-body');
+tbody.innerHTML = '';
+document.getElementById('sale-count-badge').innerText = ${sales.length} itens`;
+
+if(sales.length === 0) {
+tbody.innerHTML = <tr&gt;&lt;td colspan="6" class="text-center py-6 text-slate-400 text-xs"&gt;Nenhuma venda registrada hoje.&lt;/td&gt;&lt;/tr>;
+return;
+}
+
+sales.forEach(s => {
+const tr = document.createElement('tr');
+tr.className = "hover:bg-slate-50 transition-colors";
+tr.innerHTML = &lt;td class="py-3 px-3 font-semibold text-slate-900 text-xs"&gt;${s.time}</td>
+<td class="py-3 px-3">
+<span class="font-medium text-slate-800">{s.category}</span>
+</td>
+<td class="py-3 px-3 text-xs text-slate-600">{s.payment === 'Pix' ? 'bg-teal-50 text-teal-700' : s.payment === 'Dinheiro' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'}">{s.id})" class="w-7 h-7 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors inline-flex items-center justify-center">
+<i class="fa-solid fa-trash-can text-xs"></i>
+</button>
+</td>
+`;
+tbody.appendChild(tr);
+});
+}
+
+function deleteSale(id) {
+if(confirm('Deseja excluir esta venda?')) {
+sales = sales.filter(s => s.id !== id);
+localStorage.setItem('daily_sales_records', JSON.stringify(sales));
+renderSalesHistory();
+updateDashboardMetrics();
+updateDashboardCharts();
+renderCustomChart();
+}
+}
+
+// New Day Manual Reset
+function confirmNewDay() {
+if(confirm('Deseja iniciar um novo dia? Isso limpará todas as vendas registradas hoje.')) {
+sales = [];
+localStorage.setItem('daily_sales_records', JSON.stringify(sales));
+localStorage.setItem('daily_sales_active_date', new Date().toDateString());
+renderSalesHistory();
+updateDashboardMetrics();
+updateDashboardCharts();
+renderCustomChart();
+showMessage('Novo Dia', 'Caixa zerado para o novo dia.');
+}
+}
+
+// Dashboard Metrics & Charts
+function updateDashboardMetrics() {
+let totalRev = 0;
+let totalItems = 0;
+let payCounts = { Dinheiro: 0, Pix: 0, Cartão: 0 };
+
+sales.forEach(s => {
+totalRev += s.total;
+totalItems += s.quantity;
+if(payCounts[s.payment] !== undefined) payCounts[s.payment] += s.total;
+else payCounts[s.payment] = s.total;
+});
+
+const avgTicket = sales.length > 0 ? (totalRev / sales.length) : 0;
+let topPay = '-';
+let maxPayVal = -1;
+for(let [k, v] of Object.entries(payCounts)) {
+if(v > maxPayVal) { maxPayVal = v; topPay = k; }
+}
+
+document.getElementById('stat-total-rev').innerText = R$${totalRev.toFixed(2)};
+document.getElementById('stat-total-count').innerHTML = <i class="fa-solid fa-arrow-trend-up"&gt;&lt;/i&gt; ${sales.length} vendas; document.getElementById('stat-total-items').innerText = totalItems; document.getElementById('stat-avg-ticket').innerText =R$ ${avgTicket.toFixed(2)}`;
+document.getElementById('stat-top-payment').innerText = maxPayVal > 0 ? topPay : '-';
+}
+
+function initDashboardCharts() {
+// Hourly Bar Chart
+const hourlyCtx = document.getElementById('dashboardHourlyChart').getContext('2d');
+const hours = Array.from({length: 24}, (_, i) => ``${i}:00`);
+const hourlyData = new Array(24).fill(0);
+
+sales.forEach(s => {
+const h = parseInt(s.time.split(':')[0]) || 0;
+hourlyData[h] += s.total;
+});
+
+dashHourlyChart = new Chart(hourlyCtx, {
+type: 'bar',
+data: {
+labels: hours,
+datasets: [{
+label: 'Faturamento (R$`)',
+data: hourlyData,
+backgroundColor: '#ea580c',
+borderRadius: 6
+}]
+},
+options: {
+responsive: true,
+maintainAspectRatio: false,
+plugins: { legend: { display: false } },
+scales: {
+y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+x: { grid: { display: false } }
+}
+}
+});
+
+// Payment Donut
+const paymentCtx = document.getElementById('dashboardPaymentChart').getContext('2d');
+let payTotals = { Dinheiro: 0, Pix: 0, Cartão: 0 };
+sales.forEach(s => {
+if(payTotals[s.payment] !== undefined) payTotals[s.payment] += s.total;
+else payTotals[s.payment] = s.total;
+});
+
+dashPaymentChart = new Chart(paymentCtx, {
+type: 'doughnut',
+data: {
+labels: Object.keys(payTotals),
+datasets: [{
+data: Object.values(payTotals),
+backgroundColor: ['#10b981', '#14b8a6', '#3b82f6', '#f59e0b'],
+borderWidth: 0
+}]
+},
+options: {
+responsive: true,
+maintainAspectRatio: false,
+plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }
+}
+});
+}
+
+function updateDashboardCharts() {
+if(!dashHourlyChart || !dashPaymentChart) return;
+
+const hourlyData = new Array(24).fill(0);
+sales.forEach(s => {
+const h = parseInt(s.time.split(':')[0]) || 0;
+hourlyData[h] += s.total;
+});
+dashHourlyChart.data.datasets[0].data = hourlyData;
+dashHourlyChart.update();
+
+let payTotals = {};
+sales.forEach(s => {
+payTotals[s.payment] = (payTotals[s.payment] || 0) + s.total;
+});
+dashPaymentChart.data.labels = Object.keys(payTotals).length > 0 ? Object.keys(payTotals) : ['Dinheiro', 'Pix', 'Cartão'];
+dashPaymentChart.data.datasets[0].data = Object.keys(payTotals).length > 0 ? Object.values(payTotals) : [0, 0, 0];
+dashPaymentChart.update();
+}
+
+// Customizable Analytics Chart
+function renderCustomChart() {
+const chartType = document.getElementById('custom-chart-type').value;
+const axisX = document.getElementById('custom-axis-x').value;
+const axisY = document.getElementById('custom-axis-y').value;
+
+// Group data based on axisX and aggregate axisY
+let grouped = {};
+
+sales.forEach(s => {
+let key = '';
+if(axisX === 'product') key = s.productName;
+else if(axisX === 'category') key = s.category;
+else if(axisX === 'payment') key = s.payment;
+else if(axisX === 'hour') key = s.time.split(':')[0] + ':00';
+
+if(!key) key = 'Outros';
+
+if(!grouped[key]) {
+grouped[key] = { revenue: 0, quantity: 0, count: 0 };
+}
+grouped[key].revenue += s.total;
+grouped[key].quantity += s.quantity;
+grouped[key].count += 1;
+});
+
+const labels = Object.keys(grouped);
+const dataValues = labels.map(l => grouped[l][axisY]);
+
+const ctx = document.getElementById('customAnalyticsChart').getContext('2d');
+if(customChartInstance) {
+customChartInstance.destroy();
+}
+
+let yLabel = 'Valor';
+if(axisY === 'revenue') yLabel = 'Faturamento (R`$)';
+else if(axisY === 'quantity') yLabel = 'Quantidade (Unid)';
+else if(axisY === 'count') yLabel = 'Número de Vendas';
+
+customChartInstance = new Chart(ctx, {
+type: chartType,
+data: {
+labels: labels.length > 0 ? labels : ['Nenhum dado'],
+datasets: [{
+label: yLabel,
+data: dataValues.length > 0 ? dataValues : [0],
+backgroundColor: ['#ea580c', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#f59e0b'],
+borderRadius: 6
+}]
+},
+options: {
+responsive: true,
+maintainAspectRatio: false,
+plugins: {
+legend: { display: chartType === 'pie' || chartType === 'doughnut' }
+},
+scales: chartType === 'pie' || chartType === 'doughnut' ? {} : {
+y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+x: { grid: { display: false } }
+}
+}
+});
+}
+
+// Config Modal
+function openConfigModal() {
+renderConfigProductsList();
+document.getElementById('config-modal').classList.remove('hidden');
+}
+
+function closeConfigModal() {
+document.getElementById('config-modal').classList.add('hidden');
+initCategoryDropdowns();
+updateProductDropdown();
+}
+
+function handleAddCategory(e) {
+e.preventDefault();
+const name = document.getElementById('new-category-name').value.trim();
+if(name && !categories.includes(name)) {
+categories.push(name);
+localStorage.setItem('daily_sales_categories', JSON.stringify(categories));
+document.getElementById('new-category-name').value = '';
+initCategoryDropdowns();
+renderConfigProductsList();
+showMessage('Sucesso', 'Categoria adicionada!');
+} else {
+showMessage('Aviso', 'Categoria inválida ou já existente.', false);
+}
+}
+
+function handleAddProduct(e) {
+e.preventDefault();
+const category = document.getElementById('new-product-category').value;
+const name = document.getElementById('new-product-name').value.trim();
+const price = parseFloat(document.getElementById('new-product-price').value);
+
+if(category && name && !isNaN(price)) {
+const newProd = { id: Date.now(), category, name, price };
+products.push(newProd);
+localStorage.setItem('daily_sales_products', JSON.stringify(products));
+document.getElementById('new-product-name').value = '';
+document.getElementById('new-product-price').value = '';
+renderConfigProductsList();
+updateProductDropdown();
+showMessage('Sucesso', 'Produto cadastrado!');
+} else {
+showMessage('Aviso', 'Preencha todos os campos do produto.', false);
+}
+}
+
+function renderConfigProductsList() {
+const tbody = document.getElementById('config-products-list');
+tbody.innerHTML = '';
+
+if(products.length === 0) {
+tbody.innerHTML = <tr&gt;&lt;td colspan="4" class="text-center py-4 text-slate-400"&gt;Nenhum produto cadastrado.&lt;/td&gt;&lt;/tr>;
+return;
+}
+
+products.forEach(p => {
+const tr = document.createElement('tr');
+tr.innerHTML = &lt;td class="p-3 font-medium text-slate-700"&gt;${p.category}</td>
+<td class="p-3 text-slate-900 font-semibold">${p.name}&lt;/td&gt; &lt;td class="p-3 text-orange-600 font-bold"&gt;R$${p.price.toFixed(2)}&lt;/td&gt; &lt;td class="p-3 text-right"&gt; &lt;button onclick="deleteProduct(${p.id})" class="text-slate-400 hover:text-red-600 transition-colors">
+<i class="fa-solid fa-trash-can"></i>
+</button>
+</td>
+`;
+tbody.appendChild(tr);
+});
+}
+
+function deleteProduct(id) {
+if(confirm('Excluir este produto?')) {
+products = products.filter(p => p.id !== id);
+localStorage.setItem('daily_sales_products', JSON.stringify(products));
+renderConfigProductsList();
+updateProductDropdown();
+}
+}
+
+// Report & Image Export
+function updateReportData() {
+const now = new Date();
+document.getElementById('report-date-str').innerText = Data:${now.toLocaleDateString()}`;
+document.getElementById('report-time-str').innerText = now.toLocaleTimeString();
+
+let totalRev = 0;
+let totalItems = 0;
+let payMap = { Dinheiro: 0, Pix: 0, Cartão: 0 };
+let catMap = {};
+
+sales.forEach(s => {
+totalRev += s.total;
+totalItems += s.quantity;
+if(payMap[s.payment] !== undefined) payMap[s.payment] += s.total;
+else payMap[s.payment] = s.total;
+catMap[s.category] = (catMap[s.category] || 0) + s.total;
+});
+
+const avgTicket = sales.length > 0 ? (totalRev / sales.length) : 0;
+
+document.getElementById('rep-total').innerText = R$${totalRev.toFixed(2)};
+document.getElementById('rep-count').innerText = sales.length;
+document.getElementById('rep-items').innerText = totalItems;
+document.getElementById('rep-ticket').innerText = R$${avgTicket.toFixed(2)};
+
+const payDiv = document.getElementById('rep-payments');
+payDiv.innerHTML = '';
+for(let [k, v] of Object.entries(payMap)) {
+payDiv.innerHTML += <div class="bg-slate-50 p-2.5 rounded-lg"&gt;&lt;span class="text-[10px] text-slate-500 block"&gt;${k}</span><span class="font-bold text-slate-800">R$ ${v.toFixed(2)}</span></div>`;
+}
+
+const catDiv = document.getElementById('rep-categories');
+catDiv.innerHTML = '';
+if(Object.keys(catMap).length === 0) {
+catDiv.innerHTML = <p class="text-slate-400 text-center py-2"&gt;Sem vendas registradas hoje.&lt;/p>;
+} else {
+for(let [cat, val] of Object.entries(catMap)) {
+catDiv.innerHTML += &lt;div class="flex items-center justify-between py-1 border-b border-slate-100"&gt; &lt;span class="font-medium text-slate-700"&gt;${cat}</span>
+<span class="font-bold text-orange-600">R{val.toFixed(2)}</span>
+</div>
+`;
+}
+}
+}
+
+function exportReportAsImage() {
+const reportElement = document.getElementById('printable-report');
+html2canvas(reportElement, { scale: 2 }).then(canvas => {
+const link = document.createElement('a');
+link.download = relatorio-vendas-${new Date().toISOString().slice(0,10)}.png;
+link.href = canvas.toDataURL('image/png');
+link.click();
+showMessage('Exportado', 'Relatório baixado como imagem PNG!');
+});
+}
+</script>
+</body>
+</html>
